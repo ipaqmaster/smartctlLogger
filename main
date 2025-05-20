@@ -1,0 +1,92 @@
+#!/usr/bin/env python
+from pathlib import Path
+import datetime
+import os
+import pathlib
+import subprocess
+import time
+
+
+diskPath = '/dev/disk/by-id/'
+
+
+_scriptRoot = os.path.dirname(os.path.realpath(__file__))
+_scriptName = _scriptRoot.split('/')[-1]
+_namespace  = _scriptName
+
+os.chdir(_scriptRoot)
+
+disks = {}
+
+def is_root():
+    return os.geteuid() == 0
+
+def main():
+    nowUnix = round(time.time())
+    now     = str(datetime.datetime.now())
+
+
+    for disk in os.listdir(diskPath):
+        fullPath = "%s/%s" % (diskPath, disk)
+        if '-part' in disk:
+            continue
+
+
+        realPath = os.path.realpath("%s/%s" % (diskPath, disk))
+        realPathBasename = os.path.basename(realPath)
+
+        if not pathlib.Path(realPath).is_block_device():
+            continue
+
+        if realPathBasename not in disks:
+            disks[realPathBasename] = {}
+            disks[realPathBasename]['name'] = disk
+            disks[realPathBasename]['path'] = realPath
+            disks[realPathBasename]['aliases'] = []
+        else:
+            disks[realPathBasename]['aliases'].append(disk)
+
+    if disks:
+        if not os.path.isdir('data'):
+            os.mkdir('data')
+
+        if not is_root():
+            cmd = ['sudo']
+        else:
+            cmd = []
+
+        cmd.extend(['smartctl', '-a'])
+
+    for disk in disks:
+        diskDir = 'data/%s' % disks[disk]['name']
+        if not os.path.isdir(diskDir):
+            os.mkdir(diskDir)
+
+        for alias in disks[disk]['aliases']:
+            Path(diskDir + '/alias_' + alias).touch()
+
+        localCmd = cmd.copy()
+        localCmd.append(disks[disk]['path'])
+
+        result = subprocess.run(localCmd, stdout=subprocess.PIPE)
+
+        outputFile = '%s/smartctl.-a.%s.txt' % (diskDir, nowUnix)
+
+        if result.stdout:
+            stdout = result.stdout.decode('utf-8')
+
+            with open(outputFile, "a") as destination:
+                destination.write(now + '\n')
+                destination.write("Stdout:\n")
+                destination.write(stdout + '\n')
+
+        if result.stderr:
+            stderr = result.stdout.decode('utf-8')
+
+            with open(outputFile, "a") as destination:
+                destination.write("Stderr:\n")
+                destination.write(stderr + '\n')
+
+
+if __name__ == "__main__":
+    main()
