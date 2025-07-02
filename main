@@ -126,9 +126,14 @@ def main():
             os.mkdir('data')
 
 
+    # Go over each disk
     for disk in disks:
+
         diskDir    = 'data/%s' % disks[disk]['name']
         outputFile = '%s/smartctl.-a.%s.txt' % (diskDir, nowUnix)
+
+        if args.debug:
+            print('Processing disk: %s as %s' % (disk, diskDir))
         if not os.path.isdir(diskDir):
             os.mkdir(diskDir)
 
@@ -140,6 +145,9 @@ def main():
         if result:
             if result.stdout:
                 stdout = result.stdout.decode('utf-8')
+
+                if args.debug:
+                    print('writing: %s' % outputFile)
                 with open(outputFile, "a") as destination:
                     destination.write(now + '\n')
                     destination.write("Stdout:\n")
