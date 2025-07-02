@@ -89,14 +89,24 @@ def main():
     now     = str(datetime.datetime.now())
 
 
+    # Figure out our swap devices so we can ignore them
+    swapResult = subprocess.run(['swapon', '--noheadings'], stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    swapResultText = swapResult.stdout.decode('utf-8').split('\n')
+    swapDevices = []
+    for line in swapResultText:
+        if line:
+            swapDevices.append(line.split(' ')[0])
+
     for disk in sorted(os.listdir(diskPath)):
         fullPath = "%s/%s" % (diskPath, disk)
         if '-part' in disk:
             continue
 
-
         realPath = os.path.realpath("%s/%s" % (diskPath, disk))
         realPathBasename = os.path.basename(realPath)
+
+        if realPath in swapDevices:
+            continue
 
         if not pathlib.Path(realPath).is_block_device():
             continue
