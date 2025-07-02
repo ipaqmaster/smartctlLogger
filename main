@@ -133,12 +133,5 @@ def main():
                     destination.write("Stdout:\n")
                     destination.write(stdout + '\n')
 
-            if result.stderr:
-                stderr = result.stdout.decode('utf-8')
-                with open(outputFile, "a") as destination:
-                    destination.write("Stderr:\n")
-                    destination.write(stderr + '\n')
-
-
 if __name__ == "__main__":
     main()
