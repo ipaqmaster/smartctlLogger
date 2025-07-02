@@ -103,14 +103,16 @@ def main():
             continue
 
         realPath = os.path.realpath("%s/%s" % (diskPath, disk))
-        realPathBasename = os.path.basename(realPath)
-
-        if realPath in swapDevices:
-            continue
 
         if not pathlib.Path(realPath).is_block_device():
             continue
 
+        if realPath in swapDevices:
+            continue
+
+        realPathBasename = os.path.basename(realPath)
+
+        # Track disk
         if realPathBasename not in disks:
             disks[realPathBasename] = {}
             disks[realPathBasename]['name'] = disk
