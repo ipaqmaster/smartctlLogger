@@ -22,6 +22,57 @@ disks = {}
 def is_root():
     return os.geteuid() == 0
 
+def smartctl(diskPath, debug=False):
+
+    modes = ['auto',
+            'sntjmicron',
+            'ata',
+            'scsi',
+            'nvme',
+            'sat',
+            'usbasm1352r',
+            'usbcypress',
+            'usbjmicron',
+            'usbprolific',
+            'usbsunplus',
+            'sntasmedia',
+            'sntrealtek',
+            'jmb39x',
+            'jms56x',
+            'areca',
+            '3ware',
+            'hpt',
+            'megaraid',
+            'aacraid',
+            'sssraid',
+            'cciss']
+
+    if not is_root():
+        cmd = ['sudo']
+    else:
+        cmd = []
+
+    cmd.extend(['smartctl', '-a'])
+    cmd.append(diskPath)
+
+    for mode in modes:
+        cmdMode = cmd.copy()
+        cmdMode.extend(['-d', mode])
+        if debug:
+            print('\tTrying mode: %s on disk %s' % (mode, diskPath))
+
+        result = subprocess.run(cmdMode, stdout=subprocess.PIPE,stderr=subprocess.STDOUT) # Send stderr to stdout
+        #print(cmdMode)
+        #print(result.stdout.decode('utf-8'))
+        if result.returncode != 0:
+            continue # Try the next mode in the list
+        else:
+            print('Read %s with smartctl. Mode: %s' % (diskPath, mode))
+            return result
+
+    print('Failed to read %s with smartctl.' % diskPath)
+    return False
+
 def main():
     parser = argparse.ArgumentParser(description="A script for changing my wallpaper.")
 
@@ -62,42 +113,31 @@ def main():
         if not os.path.isdir('data'):
             os.mkdir('data')
 
-        if not is_root():
-            cmd = ['sudo']
-        else:
-            cmd = []
-
-        cmd.extend(['smartctl', '-a'])
 
     for disk in disks:
-        diskDir = 'data/%s' % disks[disk]['name']
+        diskDir    = 'data/%s' % disks[disk]['name']
+        outputFile = '%s/smartctl.-a.%s.txt' % (diskDir, nowUnix)
         if not os.path.isdir(diskDir):
             os.mkdir(diskDir)
 
         for alias in disks[disk]['aliases']:
             Path(diskDir + '/alias_' + alias).touch()
 
-        localCmd = cmd.copy()
-        localCmd.append(disks[disk]['path'])
+        result = smartctl(disks[disk]['path'], debug=args.debug)
 
-        result = subprocess.run(localCmd, stdout=subprocess.PIPE)
+        if result:
+            if result.stdout:
+                stdout = result.stdout.decode('utf-8')
+                with open(outputFile, "a") as destination:
+                    destination.write(now + '\n')
+                    destination.write("Stdout:\n")
+                    destination.write(stdout + '\n')
 
-        outputFile = '%s/smartctl.-a.%s.txt' % (diskDir, nowUnix)
-
-        if result.stdout:
-            stdout = result.stdout.decode('utf-8')
-
-            with open(outputFile, "a") as destination:
-                destination.write(now + '\n')
-                destination.write("Stdout:\n")
-                destination.write(stdout + '\n')
-
-        if result.stderr:
-            stderr = result.stdout.decode('utf-8')
-
-            with open(outputFile, "a") as destination:
-                destination.write("Stderr:\n")
-                destination.write(stderr + '\n')
+            if result.stderr:
+                stderr = result.stdout.decode('utf-8')
+                with open(outputFile, "a") as destination:
+                    destination.write("Stderr:\n")
+                    destination.write(stderr + '\n')
 
 
 if __name__ == "__main__":
