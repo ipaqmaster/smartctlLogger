@@ -64,7 +64,7 @@ def smartctl(diskPath, debug=False):
         result = subprocess.run(cmdMode, stdout=subprocess.PIPE,stderr=subprocess.STDOUT) # Send stderr to stdout
         #print(cmdMode)
         #print(result.stdout.decode('utf-8'))
-        if result.returncode == 1:
+        if result.returncode == 1 or result.returncode == 2:
             continue # Try the next mode in the list
         else:
             print('Read %s with smartctl. Mode: %s' % (diskPath, mode))
