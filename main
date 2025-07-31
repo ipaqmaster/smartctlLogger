@@ -35,7 +35,7 @@ def smartctl(diskPath, debug=False):
             'usbjmicron',
             'usbprolific',
             'usbsunplus',
-            'sntasmedia',
+#            'sntasmedia', # Causes my SD card reader to reset
             'sntrealtek',
             'jmb39x',
             'jms56x',
